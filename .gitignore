@@ -1,0 +1,7 @@
+outcomes.json
+state_flip.json
+state_haul.json
+state_auction.json
+private_runsheets/
+runsheet*.html
+*.csv

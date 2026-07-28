@@ -1,3 +1,4 @@
+import re
 import json as _json
 
 import math as _m
@@ -243,13 +244,85 @@ def render_hub(states, boards, nav=""):
 </div></body></html>'''
     return _inject_nav(page, nav)
 
+
+BANNED_ON_RUNSHEET = ("resale","resell","ev ","score","$/crew","flip for","worth $","net_list","margin")
+def _sanitize_verify(it):
+    run = it.get("run",{})
+    if run.get("verify"): return run["verify"]
+    keep=[]
+    for s in re.split(r"(?<=[.;]) ", it.get("cond","")):
+        low=s.lower()
+        if any(b in low for b in ("resell","resale","$","sell","flip","worth","market","do \u0024")): continue
+        keep.append(s)
+    return " ".join(keep) or "Match item and condition against the listing photos before paying anything."
+
+def render_runsheet(st, driver=None):
+    import html, re as _re, datetime
+    stops=[i for i in st["items"] if i.get("run",{}).get("status")=="confirmed" and (driver is None or i["run"].get("driver")==driver)]
+    by={}
+    for i in stops: by.setdefault(i["run"].get("driver","Driver"),[]).append(i)
+    pages=[]
+    for drv, its in by.items():
+        cards=[]
+        for n,i in enumerate(its,1):
+            r=i["run"]
+            cards.append(f'''<div class="stopcard">
+<div class="sc-head"><span class="sc-n">STOP {n}</span><span class="sc-id">{html.escape(i["id"])}</span><span class="sc-crew">crew of {r.get("crew",1)}</span></div>
+<div class="sc-title">{html.escape(i["title"])}</div>
+<div class="sc-line"><b>Address:</b> {html.escape(r["address"])}</div>
+<div class="sc-line"><b>Window (seller-confirmed):</b> {html.escape(r["window"])}</div>
+<div class="sc-pay">MAX AUTHORIZED TO PAY: <b>${r.get("max_pay",0)}</b> — one dollar more, call David first</div>
+<div class="sc-line"><b>Verify on sight:</b> {html.escape(_sanitize_verify(i))}</div>
+<div class="sc-line"><b>Photos (all four):</b> ☐ item front &nbsp; ☐ label / model number &nbsp; ☐ any damage &nbsp; ☐ loaded &amp; secured</div>
+<div class="sc-line paper"><b>Paper fallback:</b> arrived ______ : ______ &nbsp;&nbsp; left ______ : ______ &nbsp;&nbsp; paid $ ________</div>
+<div class="sc-line"><b>Outcome (circle):</b> PICKED UP &nbsp;·&nbsp; ITEM GONE &nbsp;·&nbsp; DECLINED / MISMATCH &nbsp;·&nbsp; RESCHEDULE</div>
+<div class="sc-notes">Notes: ______________________________________________________________________</div>
+</div>''')
+        pages.append(f'''<div class="rs-page">
+<div class="rs-head"><h1>RUN SHEET — {html.escape(drv)}</h1><div class="rs-sub">Flip Radar dispatch · date ____________ · truck ____________</div></div>
+<div class="rs-line"><b>Storage drop-off:</b> ______________________________________ &nbsp; <b>David:</b> call/text before paying over max, on any mismatch, or if anyone asks questions</div>
+{"".join(cards)}
+<div class="rs-foot">Rules: never contact the seller — David has already confirmed every stop. Pay cash only up to the printed max. If the item does not match the sheet, photograph it, mark DECLINED, and move on. Log every stop in the Run Form before leaving the curb (paper fields above are the backup).</div>
+</div>''')
+    page = ("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Run Sheet</title><style>"
+      "body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#0b0b0b;background:#fff;margin:0}"
+      ".rs-page{max-width:7.6in;margin:0 auto;padding:24px 28px;page-break-after:always}"
+      "h1{font-size:20px;margin:0}.rs-sub{color:#52514e;font-size:12px;margin-top:2px}"
+      ".rs-head{border-bottom:2px solid #0b0b0b;padding-bottom:8px;margin-bottom:8px}"
+      ".rs-line{font-size:12.5px;margin:6px 0 12px}"
+      ".stopcard{border:1.5px solid #0b0b0b;border-radius:8px;padding:10px 12px;margin-bottom:12px;page-break-inside:avoid}"
+      ".sc-head{display:flex;gap:10px;align-items:baseline}.sc-n{font-weight:800}.sc-id{font-family:ui-monospace,monospace;background:#f0efec;padding:0 6px;border-radius:4px}.sc-crew{margin-left:auto;font-weight:700}"
+      ".sc-title{font-size:15px;font-weight:700;margin:4px 0}"
+      ".sc-line{font-size:12.5px;margin:5px 0}.paper{background:#f9f9f7;padding:4px 6px;border-radius:4px}"
+      ".sc-pay{font-size:14px;font-weight:700;border:2px solid #0b0b0b;display:inline-block;padding:3px 10px;border-radius:6px;margin:4px 0}"
+      ".sc-notes{margin-top:6px;font-size:12.5px}.rs-foot{font-size:11.5px;color:#52514e;border-top:1px solid #c3c2b7;padding-top:8px;margin-top:4px}"
+      "@media print{.rs-page{padding:0.35in 0.4in}}"
+      "</style></head><body>"+ "".join(pages) +"</body></html>")
+    import re as _re2
+    content = _re2.sub(r"<style>.*?</style>", "", page, flags=_re2.S).lower()   # strip CSS before scanning
+    for b in BANNED_ON_RUNSHEET:
+        assert b not in content, "PRIVACY/SCOPE VIOLATION: banned term on driver-facing sheet: "+b
+    return page
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--board", default="flip")
     ap.add_argument("--out", default=None)
     ap.add_argument("--no-nav", action="store_true")
+    ap.add_argument("--runsheet", action="store_true")
+    ap.add_argument("--driver", default=None)
     args = ap.parse_args()
+    if args.runsheet:
+        import os
+        st = json.load(open("state_%s.json" % args.board))
+        page = render_runsheet(st, args.driver)
+        out = args.out or "private_runsheets/runsheet.html"
+        ap_out = os.path.abspath(out)
+        assert "/tmp/pub" not in ap_out and "flip-radar/flip" not in ap_out and not ap_out.endswith("index.html"), \
+            "PRIVACY: run sheets are local-only and must never be written into the publish tree"
+        os.makedirs(os.path.dirname(ap_out) or ".", exist_ok=True)
+        open(out,"w").write(page); print("runsheet wrote", out, len(page), "chars (LOCAL ONLY — never published)"); raise SystemExit
     if args.board == "hub":
         boards = [json.load(open("boards/%s.json"%n)) for n in ("flip","haul","auction")]
         states = {}
