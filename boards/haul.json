@@ -5,10 +5,10 @@
  "subtitle": "Richmond, VA \u00b7 paid removal & cleanout leads",
  "renderer": "haul",
  "scoring_model": "haul_v1_crewhr",
- "sort_key": "score (crew_hr-weighted)",
+ "sort_key": "cash_crew_hr",
  "board_cap": 20,
  "publish_path": "haul/index.html",
- "schedule_cron_utc": "30 11,21 * * *",
+ "schedule_cron_utc": "30 11 * * *",
  "row_fields": [
   "score",
   "title",
@@ -37,5 +37,5 @@
   "best_crew_hr",
   "recurring_ct"
  ],
- "floor": "$40/crew-hr"
+ "floor": "$40 CASH/crew-hr (recovery excluded); recovery-carried rows stay with flag"
 }

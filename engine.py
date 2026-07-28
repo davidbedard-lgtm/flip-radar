@@ -159,11 +159,11 @@ def render_haul(st, prof, nav=""):
     <div class="cond">{html.escape(i["cond"])}</div>
     <div class="act">→ {html.escape(i["action"])}</div>
     <div class="qr">quote ≈ <b>{money(i["quote_lo"])}–{money(i["quote_hi"])}</b> · disposal ≈ {money(i["disposal_cost"])} · drive ≈ {money(i["drive_cost"])} · labor ≈ {money(i["labor_cost"])} · recovery offset ≈ <span class="qcash">+{money(i["recovery_est"])}</span></div>
-    {freon}<div class="lab">&#9201; ~{i["time_min"]//60}h{i["time_min"]%60:02d}m all-in · <b class="{'lok' if i['crew_hr']>=40 else 'lno'}">≈${i["crew_hr"]}/crew-hr</b> · net ≈ <b class="lok">{money(i["net"])}</b> · EV {money(i["ev"])} (win odds {int(i["p_win"]*100)}%)</div>
+    {freon}<div class="lab">&#9201; ~{i["time_min"]//60}h{i["time_min"]%60:02d}m all-in · CASH <b class="{'lok' if i['cash_crew_hr']>=40 else 'lno'}">≈${i["cash_crew_hr"]}/crew-hr</b> (fee only) · upside with recovery ≈ ${i["crew_hr"]}/crew-hr · EV {money(i["ev"])} ({int(i["p_win"]*100)}% win{(" × %d%% item still there"%round(i.get("p_avail_src",1)*100)) if i.get("derived") else ""})</div>
     <div class="fls">{flags}</div>
   </div>
-  <div class="nums"><div class="net">{money(i["net"])}</div><div class="nlb">est. net per job</div>
-    <div class="sub">${i["crew_hr"]}/crew-hr · conf: {i["conf"]}</div></div>
+  <div class="nums"><div class="net">{money(i["cash_net"])}</div><div class="nlb">CASH net (fee − costs)</div>
+    <div class="sub">+{money(i["recovery_est"])} recovery upside → {money(i["net"])} total</div><div class="sub">conf: {i["conf"]}</div></div>
 </div>''')
     frows="".join('<div class="prow"><b>%s</b><span>%s</span></div>'%(html.escape(f["title"]),html.escape(f["reason"])) for f in filtered)
     vrows="".join('<div class="prow"><b>%s</b><span>%s</span></div>'%(html.escape(a),html.escape(b)) for a,b in [
@@ -173,30 +173,31 @@ def render_haul(st, prof, nav=""):
     ])
     fresh_ct=sum(1 for i in items if i.get("age_hours",99)<=24)
     ev_total=sum(i["ev"] for i in items)
-    best=max(items,key=lambda x:x["crew_hr"]) if items else None
+    best=max(items,key=lambda x:x["cash_crew_hr"]) if items else None
     rec_ct=sum(1 for i in items if "recurring potential" in " ".join(i["flags"]))
     title="Haul Radar"; page = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Haul Radar — Richmond, VA</title>
 {leaflet_assets}<style>{CSS_LIT}</style></head><body><div class="vr">
 <div class="hd"><h1>Haul Radar</h1><span class="sub">Richmond, VA · paid removal &amp; cleanout leads</span>
-<span class="sub" style="margin-left:auto">Scanned <b>{meta["scan_label"]}</b> · runs with the 7:30 AM / 5:30 PM scans</span></div>
+<span class="sub" style="margin-left:auto">Scanned <b>{meta["scan_label"]}</b> · HAUL scans run <b>mornings only</b> (7:30 AM)</span></div>
 <div class="cfg">Base: <b>South Richmond (23224)</b> · the truck earns instead of costs: quote − disposal − drive − labor <b>+ resale recovery</b> · floor <b>$40/crew-hr</b> · {dm}</div>
 <div class="tiles">
 <div class="tile"><div class="tv">{len(items)}</div><div class="tl">open leads over the floor</div></div>
 <div class="tile"><div class="tv">{fresh_ct}</div><div class="tl">fresh (≤24h) — call today</div></div>
 <div class="tile"><div class="tv">{money(ev_total)}</div><div class="tl">total EV on the board</div><div class="hint">net × odds each job is still open</div></div>
-<div class="tile"><div class="tv">${best["crew_hr"] if best else 0}/hr</div><div class="tl">best $/crew-hr — {html.escape(best["title"][:30]) if best else "—"}…</div></div>
+<div class="tile"><div class="tv">${best["cash_crew_hr"] if best else 0}/hr</div><div class="tl">best CASH $/crew-hr — {html.escape(best["title"][:28]) if best else "—"}…</div></div>
 <div class="tile"><div class="tv">{rec_ct}</div><div class="tl">leads with recurring potential</div><div class="hint">property managers, estates, landlords</div></div>
 </div>
 {build_map(st)}
-<h2>Ranked leads — best $/crew-hour first</h2>
+<h2>Ranked leads — best CASH $/crew-hour first (recovery shown as upside, never mixed in)</h2>
 {"".join(rows)}
 <div class="cols">
+<div class="panel"><h2>Relationships / recurring — applications, not leads</h2><div class="ps">Standing recruitment posts (win-odds &lt;15%) — these resolve by applying and building a relationship, not in the lead flow. They clear the cash floor; they just are not one-off jobs.</div>{"".join('<div class="prow"><a href="%s" target="_blank" rel="noopener"><b>%s</b></a><span>cash ≈ $%s/crew-hr if landed · %s</span></div>'%(r["url"],html.escape(r["title"][:70]),r["cash_crew_hr"],html.escape(r["action"])) for r in st.get("relationships",[]))}</div>
 <div class="panel"><h2>Verify before quoting</h2><div class="ps">Standing open questions — not legal or insurance advice, just the three things to nail down before taking paid jobs.</div>{vrows}</div>
 <div class="panel"><h2>Seen &amp; filtered this scan</h2><div class="ps">Leads under the $40/crew-hr floor, expired gigs, and out-of-area asks.</div>{frows}
 <div class="prow"><b>Scoring</b><span>net = quote − disposal − drive ($0.70/mi RT) − labor ($18/hr/person) + resale recovery. Score weights: $/crew-hr 45 (cap $150), EV 25 (cap $400), freshness 20, proximity 10. Gig win-odds decay fast: ≤6h 70% · ≤24h 45% · ≤3d 20% · older 8%. All quotes and volumes are estimates from post text.</span></div></div>
 </div>
-<div class="foot">Quotes, volumes, and disposal costs are estimates until you see the job — confirm tipping rates by phone before bidding. Leads only: you make contact and set terms; the scanner never messages anyone. Derived leads are stuck free-items reframed as removal quotes — the poster has NOT asked for paid help.</div>
+<div class="foot">Quotes, volumes, and disposal costs are estimates until you see the job — confirm tipping rates by phone before bidding. Leads only: you make contact and set terms; the scanner never messages anyone. Derived leads are stuck free-items reframed as removal quotes — the poster has NOT asked for paid help. Linked-plan rows share one object with the FLIP board: pitch paid removal first, fall back to the free grab if declined — never run both asks. Hub totals count derived leads at CASH value only; the resale upside counts once, on FLIP.</div>
 </div></body></html>'''
     return _inject_nav(page, nav)
 
@@ -209,7 +210,7 @@ def render_hub(states, boards, nav=""):
         st=states.get(b["name"]);
         if not st: continue
         items=st["items"]; fresh=sum(1 for i in items if i.get("posted_days",9)<=3 or i.get("age_hours",99)<=24)
-        ev=sum(i.get("ev_net",i.get("ev",0)) for i in items)
+        ev=sum(i.get("ev_hub", i.get("ev_net", i.get("ev",0))) for i in items)
         top=items[0] if items else None
         cards.append(f'''<a class="tile" style="text-decoration:none" href="{b["name"]}/">
 <div class="tv">{b["title"]}</div>
@@ -217,13 +218,28 @@ def render_hub(states, boards, nav=""):
 <div class="hint">top: {html.escape(top["title"][:60]) if top else "—"}</div>
 <div class="hint" style="color:var(--seq);font-weight:600">open board →</div></a>''')
     scan = states.get("flip",{}).get("meta",{}).get("scan_label","")
+    try: outcomes = json.load(open("outcomes.json"))
+    except Exception: outcomes = []
+    if outcomes:
+        realized = sum((o.get("sold_price") or 0)-(o.get("ask_paid") or 0)-(o.get("repair_cost") or 0)-round((o.get("drive_miles") or 0)*0.70) for o in outcomes if o.get("sold_price") is not None)
+        sold = [o for o in outcomes if o.get("sold_price") is not None]
+        cats = {}
+        for o in sold: cats.setdefault(o.get("category","other"),[]).append(o)
+        acc = " · ".join("%s: %d logged"%(k,len(v)) for k,v in sorted(cats.items()))
+        results_panel = ('<div class="panel" style="margin-top:14px"><h2>Results — actuals, not estimates</h2>'
+          '<div class="prow"><b>%d flips logged · %d sold · realized net %s</b><span>%s. Calibration factors activate at 5 sales per category.</span></div></div>'
+          % (len(outcomes), len(sold), "$%s"%format(int(realized),","), acc or "—"))
+    else:
+        results_panel = ('<div class="panel" style="margin-top:14px"><h2>Results — actuals, not estimates</h2>'
+          '<div class="prow"><b>0 outcomes logged yet</b><span>Report any result in chat in one sentence — "got the drill for $10, sold it for $55 in three days" — and it lands here. Ten logged outcomes unlock per-category calibration; until then every board number is an uncalibrated estimate.</span></div></div>')
     page = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Radar — Boards</title>
 <style>{CSS_LIT}</style></head><body><div class="vr">
 <div class="hd"><h1>Radar</h1><span class="sub">Richmond, VA · David's automated boards</span>
 <span class="sub" style="margin-left:auto">Last scan <b>{scan}</b> · auto-updates 7:30 AM / 5:30 PM</span></div>
 <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">{"".join(cards)}</div>
-<div class="foot">Flip = free items worth grabbing and reselling. Haul = paid removal/cleanout leads where the load's resale value subsidizes the quote. Boards refresh twice daily; every number is an estimate.</div>
+{results_panel}
+<div class="foot">Flip = free items worth grabbing and reselling. Haul = paid removal/cleanout leads where the load's resale value subsidizes the quote (HAUL scans mornings only). Dedupe rule: a derived HAUL lead and its FLIP source are one object — hub totals count the resale value once, on FLIP; derived leads enter at cash value. Every number is an estimate until the outcomes ledger calibrates it.</div>
 </div></body></html>'''
     return _inject_nav(page, nav)
 
