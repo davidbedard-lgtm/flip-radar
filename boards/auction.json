@@ -1,0 +1,15 @@
+{
+ "name": "auction",
+ "enabled": false,
+ "title": "Auction Radar",
+ "subtitle": "Richmond, VA \u00b7 surplus & auction bid ceilings",
+ "renderer": "auction",
+ "status": "SCAFFOLD ONLY \u2014 model to be documented in playbook \u00a7B (Phase 5); no scrapers built",
+ "sources_planned": [
+  "GovDeals",
+  "PublicSurplus",
+  "county/school surplus",
+  "local auction houses"
+ ],
+ "model_sketch": "deadline-driven; primary output = MAX BID CEILING clearing target net after buyer's premium + pickup window + drive + labor; sort by hours-to-close"
+}

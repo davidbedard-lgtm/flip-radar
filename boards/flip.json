@@ -1,0 +1,38 @@
+{
+ "name": "flip",
+ "enabled": true,
+ "title": "Flip Radar",
+ "subtitle": "Richmond, VA \u00b7 free-item arbitrage board",
+ "renderer": "flip",
+ "scoring_model": "flip_v2_ev_labor",
+ "sort_key": "score",
+ "board_cap": 30,
+ "publish_path": "flip/index.html",
+ "schedule_cron_utc": "30 11,21 * * *",
+ "row_fields": [
+  "score",
+  "title",
+  "freshness",
+  "category",
+  "area/miles",
+  "size",
+  "cond",
+  "action",
+  "quick_cash",
+  "labor_line",
+  "flags",
+  "net_list",
+  "resale_range",
+  "drive_cost",
+  "conf"
+ ],
+ "tiles": [
+  "live_count",
+  "fresh_3d",
+  "resale_range",
+  "ev_total",
+  "best_single",
+  "labor_ok"
+ ],
+ "note": "flip renderer is the verbatim v9 generator for pixel parity; profile fields document the mapping"
+}

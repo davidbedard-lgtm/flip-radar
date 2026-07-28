@@ -1,0 +1,41 @@
+{
+ "name": "haul",
+ "enabled": true,
+ "title": "Haul Radar",
+ "subtitle": "Richmond, VA \u00b7 paid removal & cleanout leads",
+ "renderer": "haul",
+ "scoring_model": "haul_v1_crewhr",
+ "sort_key": "score (crew_hr-weighted)",
+ "board_cap": 20,
+ "publish_path": "haul/index.html",
+ "schedule_cron_utc": "30 11,21 * * *",
+ "row_fields": [
+  "score",
+  "title",
+  "freshness_hours",
+  "derived_flag",
+  "category",
+  "area/miles",
+  "crew",
+  "cond",
+  "action",
+  "quote_range",
+  "disposal_cost",
+  "drive_cost",
+  "labor_cost",
+  "recovery_est",
+  "net",
+  "crew_hr",
+  "ev",
+  "p_win",
+  "flags"
+ ],
+ "tiles": [
+  "open_leads",
+  "fresh_24h",
+  "ev_total",
+  "best_crew_hr",
+  "recurring_ct"
+ ],
+ "floor": "$40/crew-hr"
+}
